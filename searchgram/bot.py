@@ -15,10 +15,10 @@ from typing import Tuple
 from pyrogram import Client, enums, filters, types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from __init__ import SearchEngine
-from config import OWNER_ID, TOKEN
-from init_client import get_client
-from utils import setup_logger
+from . import SearchEngine
+from .config import OWNER_ID, TOKEN
+from .init_client import get_client
+from .utils import setup_logger
 
 tgdb = SearchEngine()
 
@@ -238,5 +238,9 @@ def send_method_callback(client: "Client", callback_query: types.CallbackQuery):
     message.edit_text(new_text, reply_markup=new_markup, disable_web_page_preview=True)
 
 
-if __name__ == "__main__":
+def main():
     app.run()
+
+
+if __name__ == "__main__":
+    main()

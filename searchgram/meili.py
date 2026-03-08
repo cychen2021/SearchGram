@@ -11,9 +11,9 @@ import logging
 
 import meilisearch
 
-from config import MEILI_HOST, MEILI_PASS
-from engine import BasicSearchEngine
-from utils import sizeof_fmt
+from .config import MEILI_HOST, MEILI_PASS
+from .engine import BasicSearchEngine
+from .utils import sizeof_fmt
 
 
 class SearchEngine(BasicSearchEngine):

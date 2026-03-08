@@ -11,9 +11,9 @@ import math
 import pymongo
 import zhconv
 
-from config import MONGO_HOST
-from engine import BasicSearchEngine
-from utils import sizeof_fmt
+from .config import MONGO_HOST
+from .engine import BasicSearchEngine
+from .utils import sizeof_fmt
 
 
 class SearchEngine(BasicSearchEngine):

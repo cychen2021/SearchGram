@@ -16,10 +16,10 @@ import time
 import fakeredis
 from pyrogram import Client, filters, types
 
-from __init__ import SearchEngine
-from config import BOT_ID
-from init_client import get_client
-from utils import setup_logger
+from . import SearchEngine
+from .config import BOT_ID
+from .init_client import get_client
+from .utils import setup_logger
 
 setup_logger()
 
@@ -79,6 +79,10 @@ def sync_history():
         safe_edit(saved, log)
 
 
-if __name__ == "__main__":
+def main():
     threading.Thread(target=sync_history).start()
     app.run()
+
+
+if __name__ == "__main__":
+    main()

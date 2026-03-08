@@ -14,9 +14,9 @@ from zincsearch_sdk.model.meta_query import MetaQuery
 from zincsearch_sdk.model.meta_query_string_query import MetaQueryStringQuery
 from zincsearch_sdk.model.meta_zinc_query import MetaZincQuery
 
-from config import ZINC_HOST, ZINC_PASS, ZINC_USER
-from engine import BasicSearchEngine
-from utils import sizeof_fmt
+from .config import ZINC_HOST, ZINC_PASS, ZINC_USER
+from .engine import BasicSearchEngine
+from .utils import sizeof_fmt
 
 configuration = zincsearch_sdk.Configuration(host=ZINC_HOST, username=ZINC_USER, password=ZINC_PASS)
 
