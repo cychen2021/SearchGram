@@ -9,6 +9,7 @@ __author__ = "Benny <benny.think@gmail.com>"
 
 import contextlib
 import json
+import os
 import urllib.request
 
 from pyrogram import Client
@@ -17,6 +18,9 @@ from .config import APP_HASH, APP_ID, PROXY, IPv6
 
 
 def get_client(token=None):
+    # Ensure session directory exists
+    os.makedirs("session", exist_ok=True)
+
     if isinstance(PROXY, str):
         proxy = json.loads(PROXY)
     else:
