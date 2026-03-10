@@ -9,7 +9,6 @@ __author__ = "Benny <benny.think@gmail.com>"
 
 import contextlib
 import json
-import os
 import urllib.request
 
 from pyrogram import Client
@@ -18,18 +17,15 @@ from .config import APP_HASH, APP_ID, PROXY, IPv6
 
 
 def get_client(token=None):
-    # Ensure session directory exists
-    os.makedirs("session", exist_ok=True)
-
     if isinstance(PROXY, str):
         proxy = json.loads(PROXY)
     else:
         proxy = PROXY
     app_device = dict(app_version=f"SearchGram/{get_revision()}", device_model="Firefox", proxy=proxy)
     if token:
-        return Client("session/bot", APP_ID, APP_HASH, bot_token=token, ipv6=IPv6, **app_device)
+        return Client("searchgram_bot", APP_ID, APP_HASH, bot_token=token, ipv6=IPv6, **app_device)
     else:
-        return Client("session/client", APP_ID, APP_HASH, ipv6=IPv6, **app_device)
+        return Client("searchgram_client", APP_ID, APP_HASH, ipv6=IPv6, **app_device)
 
 
 def get_revision():
