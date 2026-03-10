@@ -1,0 +1,29 @@
+# SearchGram Configuration File
+# Copy this file to ~/.config/searchgram/config.toml and modify as needed
+
+# Telegram API credentials
+# Get these from https://my.telegram.org/
+APP_ID = 321232123
+APP_HASH = "your_app_hash_here"
+
+# Bot token from @BotFather
+TOKEN = "123456:your_bot_token_here"
+
+# MeiliSearch configuration
+MEILI_HOST = "http://localhost:7700"
+
+# Limit MeiliSearch memory usage (optional)
+# Useful if you have limited RAM
+# Example: "800M" or "1G"
+# MEILI_MAX_INDEXING_MEMORY = "800M"
+
+# Your Telegram user ID
+# Get this from @blog_update_bot
+OWNER_ID = "260260121"
+
+# Proxy configuration (optional)
+# Uncomment and modify if you need proxy support
+# [PROXY]
+# scheme = "socks5"
+# hostname = "localhost"
+# port = 1080

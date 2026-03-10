@@ -98,22 +98,58 @@ This guide will show you how to install SearchGram with our default search engin
 * Obtain your bot token by contacting https://t.me/BotFather.
 * Obtain your user ID by contacting https://t.me/blog_update_bot.
 
-## 2. Modify environment file
+## 2. Configure SearchGram
 
-Use your favorite editor to modify `config.py`, example:
+SearchGram can be configured using a TOML configuration file (recommended) or environment variables.
 
-```python
+### Option A: Using config.toml (Recommended)
+
+Create a configuration file at `~/.config/searchgram/config.toml`:
+
+```bash
+mkdir -p ~/.config/searchgram
+cp config.example.toml ~/.config/searchgram/config.toml
+```
+
+Then edit `~/.config/searchgram/config.toml` with your values:
+
+```toml
+# Telegram API credentials
 APP_ID = 176552
 APP_HASH = "667276jkajhw"
 TOKEN = "123456:8hjhad"
-MEILI_HOST = "localhost"
+
+# MeiliSearch configuration
+MEILI_HOST = "http://localhost:7700"
+
+# Optional: Limit MeiliSearch memory usage
+# MEILI_MAX_INDEXING_MEMORY = "800M"
+
+# Your Telegram user ID
 OWNER_ID = "2311231"
+
+# Optional: Proxy configuration (if needed)
+# [PROXY]
+# scheme = "socks5"
+# hostname = "localhost"
+# port = 1080
 ```
 
-If you have limited network access, such as in China, you will need to set up a proxy.
+### Option B: Using environment variables
 
-```python
-PROXY = {"scheme": "socks5", "hostname": "localhost", "port": 1080}
+You can also set configuration using environment variables, which will override the TOML file values:
+
+```bash
+export APP_ID=176552
+export APP_HASH="667276jkajhw"
+export TOKEN="123456:8hjhad"
+export MEILI_HOST="http://localhost:7700"
+export OWNER_ID="2311231"
+```
+
+For proxy configuration with environment variables:
+```bash
+export PROXY='{"scheme": "socks5", "hostname": "localhost", "port": 1080}'
 ```
 
 ## 3. Login to client

@@ -8,16 +8,46 @@
 __author__ = "Benny <benny.think@gmail.com>"
 
 import os
+import sys
+from pathlib import Path
 
-APP_ID = int(os.getenv("APP_ID", 321232123))
-APP_HASH = os.getenv("APP_HASH", "23231321")
-TOKEN = os.getenv("TOKEN", "1234")  # id:hash
+# Import appropriate TOML library based on Python version
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
+
+# Try to load config from TOML file
+_config = {}
+_config_path = Path.home() / ".config" / "searchgram" / "config.toml"
+
+if tomllib and _config_path.exists():
+    try:
+        with open(_config_path, "rb") as f:
+            _config = tomllib.load(f)
+    except Exception as e:
+        print(f"Warning: Failed to load config from {_config_path}: {e}")
+        _config = {}
+
+# Helper function to get config value with fallback to environment variable
+def _get_config(toml_key, env_key, default):
+    """Get config value from TOML file, then environment variable, then default."""
+    return _config.get(toml_key, os.getenv(env_key, default))
+
+APP_ID = int(_get_config("APP_ID", "APP_ID", 321232123))
+APP_HASH = _get_config("APP_HASH", "APP_HASH", "23231321")
+TOKEN = _get_config("TOKEN", "TOKEN", "1234")  # id:hash
 
 ######### search engine settings #########
 # MeiliSearch, by default it's meili in docker-compose
-MEILI_HOST = os.getenv("MEILI_HOST", "http://meili:7700")
+MEILI_HOST = _get_config("MEILI_HOST", "MEILI_HOST", "http://meili:7700")
 # Using bot token for simplicity
 MEILI_PASS = os.getenv("MEILI_MASTER_KEY", TOKEN)
+# Read MEILI_MAX_INDEXING_MEMORY from config or environment
+MEILI_MAX_INDEXING_MEMORY = _get_config("MEILI_MAX_INDEXING_MEMORY", "MEILI_MAX_INDEXING_MEMORY", None)
 
 # If you want to use MongoDB as search engine, you need to set this
 MONGO_HOST = os.getenv("MONGO_HOST", "mongo")
@@ -32,10 +62,18 @@ ZINC_PASS = os.getenv("ZINC_FIRST_ADMIN_PASSWORD", "root")
 
 ####################################
 # Your own user id, for example: 260260121
-OWNER_ID = os.getenv("OWNER_ID", "260260121")
+OWNER_ID = _get_config("OWNER_ID", "OWNER_ID", "260260121")
 BOT_ID = int(TOKEN.split(":")[0])
 
-PROXY = os.getenv("PROXY")
+# Handle PROXY configuration - can be a dict from TOML or string from env
+_proxy_from_config = _config.get("PROXY")
+_proxy_from_env = os.getenv("PROXY")
+if _proxy_from_config:
+    PROXY = _proxy_from_config
+elif _proxy_from_env:
+    PROXY = _proxy_from_env
+else:
+    PROXY = None
 # example proxy configuration
 # PROXY = {"scheme": "socks5", "hostname": "localhost", "port": 1080}
 
