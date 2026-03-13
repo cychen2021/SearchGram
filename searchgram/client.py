@@ -112,12 +112,34 @@ def sync_history(client):
 
 
 def main():
-    # Start sync history thread for each client
-    for client in clients:
-        threading.Thread(target=sync_history, args=(client,), daemon=True).start()
+    from pyrogram import idle
+    import asyncio
 
-    # Run all clients simultaneously using compose
-    compose(clients)
+    async def run():
+        # Start each client sequentially to handle authentication properly
+        logging.info(f"Authenticating {len(clients)} session(s)...")
+        for i, client in enumerate(clients, 1):
+            logging.info(f"[{i}/{len(clients)}] Starting session: {client.name}")
+            await client.start()
+            me = await client.get_me()
+            logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
+
+        logging.info("All sessions authenticated successfully!")
+
+        # Start sync history thread for each client
+        for client in clients:
+            threading.Thread(target=sync_history, args=(client,), daemon=True).start()
+
+        # Keep all clients running
+        logging.info("All clients are now running. Press Ctrl+C to stop.")
+        await idle()
+
+        # Stop all clients on exit
+        for client in clients:
+            await client.stop()
+
+    # Run the async function
+    asyncio.run(run())
 
 
 if __name__ == "__main__":
