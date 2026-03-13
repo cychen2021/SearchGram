@@ -32,16 +32,25 @@ OWNER_ID = "260260121"
 # port = 1080
 
 # Session configuration
-# List of session names to run (for multiple accounts)
-# Each session will be a separate .session file in your session directory
-# If not specified, defaults to ["searchgram_client"]
-# sessions = ["account1", "account2"]
-
-# Sync configuration
+# Each session can have its own sync list
+# If you only have one account, you can still use the old format (see below)
+[sessions.searchgram_client]
 # List of chat IDs or usernames to sync history from
-[sync]
-# Add chat IDs or usernames here, one per line
+sync = []
 # Examples:
+# sync = [123456, "@BennyThink", 789012]
+
+# For multiple accounts:
+# [sessions.account1]
+# sync = [123456, "@username1"]
+#
+# [sessions.account2]
+# sync = [789012, "@username2"]
+
+# Legacy format (still supported for single account):
+# If you don't use [sessions.*] sections, you can use the old format:
+# sessions = ["searchgram_client"]
+# [sync]
 # "123456" = true
 # "BennyThink" = true
 

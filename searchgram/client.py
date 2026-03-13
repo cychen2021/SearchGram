@@ -54,14 +54,37 @@ async def sync_history(client):
     import asyncio
     await asyncio.sleep(30)
 
-    # Get sync list from config
-    sync_items = get_sync_list()
+    # Get sync list for this specific session
+    sync_items = get_sync_list(session_name=client.name)
 
     if not sync_items:
         logging.info(f"[{client.name}] No chats configured for sync in config.toml")
         return
 
     saved = await client.send_message("me", f"[{client.name}] Starting to sync history...")
+
+    # Cleanup: delete messages from chats that are no longer in the sync list
+    account_id = client.me.id
+    try:
+        synced_chats = tgdb.get_synced_chats_for_account(account_id)
+        # Resolve sync_items to chat IDs for comparison
+        sync_chat_ids = set()
+        for uid in sync_items:
+            try:
+                # Try to resolve each item to get its numeric chat ID
+                chat = await client.get_chat(uid)
+                sync_chat_ids.add(str(chat.id))
+            except:
+                # If resolution fails, keep the original value for comparison
+                sync_chat_ids.add(str(uid).lstrip('@'))
+
+        for chat_id in synced_chats:
+            # Check if this chat is still in the sync list
+            if chat_id not in sync_chat_ids:
+                logging.info(f"[{client.name}] Removing messages from chat {chat_id} (no longer in sync list)")
+                tgdb.delete_chat_for_account(account_id, chat_id)
+    except Exception as e:
+        logging.error(f"[{client.name}] Error during cleanup: {e}")
 
     for uid in sync_items:
         try:

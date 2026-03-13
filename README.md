@@ -135,6 +135,32 @@ OWNER_ID = "2311231"
 # port = 1080
 ```
 
+### Multi-Account Support
+
+SearchGram supports running multiple Telegram accounts simultaneously. Each account can have its own sync list:
+
+```toml
+# Multiple owner IDs for bot authorization
+OWNER_ID = ["260260121", "5129702470"]
+
+# Configure each session with its own sync list
+[sessions.account1]
+sync = [123456, "@username1", 789012]
+
+[sessions.account2]
+sync = [456789, "@username2"]
+```
+
+**Important:** When you remove a chat from a session's sync list, messages from that chat indexed by that account will be automatically deleted from the search index.
+
+For single account (legacy format still supported):
+```toml
+sessions = ["searchgram_client"]
+[sync]
+"123456" = true
+"BennyThink" = true
+```
+
 ### Option B: Using environment variables
 
 You can also set configuration using environment variables, which will override the TOML file values:

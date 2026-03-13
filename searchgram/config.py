@@ -90,16 +90,37 @@ else:
 IPv6 = bool(os.getenv("IPv6", False))
 
 # Sync configuration - get lists from TOML sections
-def get_sync_list():
-    """Get list of chat IDs/usernames to sync from config."""
+def get_sync_list(session_name=None):
+    """Get list of chat IDs/usernames to sync from config.
+
+    Args:
+        session_name: If provided, get sync list for specific session from [sessions.name].
+                     If None, get from legacy [sync] section.
+
+    Returns:
+        List of chat IDs/usernames to sync.
+    """
+    if session_name:
+        # New format: [sessions.session_name]
+        sessions_config = _config.get("sessions", {})
+        if isinstance(sessions_config, dict) and session_name in sessions_config:
+            sync_list = sessions_config[session_name].get("sync", [])
+            # Convert to list of strings/ints
+            return [str(item) if isinstance(item, int) else item for item in sync_list]
+
+    # Legacy format: [sync]
     sync_section = _config.get("sync", {})
     return list(sync_section.keys())
 
 def get_sessions():
     """Get list of session names to run. If not configured, return default session."""
-    sessions = _config.get("sessions")
-    if isinstance(sessions, list):
-        return sessions
+    # New format: return keys from [sessions.*] sections
+    sessions_config = _config.get("sessions")
+    if isinstance(sessions_config, dict):
+        return list(sessions_config.keys())
+    # Legacy format: list of session names
+    elif isinstance(sessions_config, list):
+        return sessions_config
     return ["searchgram_client"]  # Default session name
 
 def get_whitelist():

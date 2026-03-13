@@ -147,3 +147,11 @@ class BasicSearchEngine:
 
     def delete_user(self, user):
         pass
+
+    def delete_chat_for_account(self, account_id, chat_id):
+        """Delete all messages for a specific chat indexed by a specific account."""
+        pass
+
+    def get_synced_chats_for_account(self, account_id):
+        """Get list of chat IDs that have been synced for a specific account."""
+        pass

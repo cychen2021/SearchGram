@@ -27,6 +27,8 @@ class SearchEngine(BasicSearchEngine):
                 ["timestamp:desc", "words", "typo", "proximity", "attribute", "sort", "exactness"]
             )
             self.client.index("telegram").update_sortable_attributes(["timestamp"])
+            # Enable faceting for chat.id to get list of synced chats per account
+            self.client.index("telegram").update_faceting({"maxValuesPerFacet": 1000})
         except:
             logging.critical("Failed to connect to MeiliSearch")
 
@@ -78,6 +80,33 @@ class SearchEngine(BasicSearchEngine):
         data = self.client.index("telegram").search("", params)
         for hit in data["hits"]:
             self.client.delete_index(hit["ID"])
+
+    def delete_chat_for_account(self, account_id, chat_id):
+        """Delete all messages for a specific chat indexed by a specific account."""
+        try:
+            # Use delete_documents with filter
+            filter_str = f"indexed_by_account = {account_id} AND chat.id = {chat_id}"
+            self.client.index("telegram").delete_documents(filter=filter_str)
+            logging.info(f"Deleted messages from chat {chat_id} for account {account_id}")
+        except Exception as e:
+            logging.error(f"Failed to delete messages for chat {chat_id}, account {account_id}: {e}")
+
+    def get_synced_chats_for_account(self, account_id):
+        """Get list of chat IDs that have been synced for a specific account."""
+        try:
+            params = {
+                "filter": [f"indexed_by_account = {account_id}"],
+                "facets": ["chat.id"],
+                "hitsPerPage": 0,  # We only want facets, not actual hits
+            }
+            result = self.client.index("telegram").search("", params)
+            # Extract unique chat IDs from facet distribution
+            if "facetDistribution" in result and "chat.id" in result["facetDistribution"]:
+                return list(result["facetDistribution"]["chat.id"].keys())
+            return []
+        except Exception as e:
+            logging.error(f"Failed to get synced chats for account {account_id}: {e}")
+            return []
 
 
 if __name__ == "__main__":
