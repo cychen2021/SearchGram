@@ -110,27 +110,19 @@ def main():
     import asyncio
 
     async def run():
-        # Step 1: Check and authenticate any unauthenticated clients sequentially
-        logging.info(f"Checking authentication status for {len(clients)} session(s)...")
+        # Step 1: Authenticate all clients sequentially (start and stop to prevent event processing)
+        logging.info(f"Authenticating {len(clients)} session(s)...")
 
         for i, client in enumerate(clients, 1):
-            await client.connect()
-            is_authorized = await client.is_authorized()
-
-            if not is_authorized:
-                print(f"\n{'='*60}")
-                print(f"  [{i}/{len(clients)}] Authenticating session: {client.name}")
-                print(f"{'='*60}")
-                # Disconnect and use start() for interactive authentication
-                await client.disconnect()
-                await client.start()
-                # Stop immediately after authentication to prevent message processing
-                await client.stop()
-                logging.info(f"[{i}/{len(clients)}] ✓ Authenticated successfully")
-            else:
-                me = await client.get_me()
-                logging.info(f"[{i}/{len(clients)}] ✓ Already authenticated as: {me.first_name} (ID: {me.id})")
-                await client.disconnect()
+            print(f"\n{'='*60}")
+            print(f"  [{i}/{len(clients)}] Session: {client.name}")
+            print(f"{'='*60}")
+            # start() handles both new auth (with prompts) and existing sessions
+            await client.start()
+            me = await client.get_me()
+            logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
+            # Stop immediately to prevent message processing
+            await client.stop()
 
         logging.info("All sessions authenticated successfully!")
 
