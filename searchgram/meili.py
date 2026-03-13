@@ -21,7 +21,18 @@ class SearchEngine(BasicSearchEngine):
         # ["BOT", "CHANNEL", "GROUP", "PRIVATE", "SUPERGROUP"]
         try:
             self.client = meilisearch.Client(MEILI_HOST, MEILI_PASS)
-            self.client.create_index("telegram", {"primaryKey": "ID"})
+
+            # Try to create index, ignore if it already exists
+            try:
+                self.client.create_index("telegram", {"primaryKey": "ID"})
+                logging.info("Created new MeiliSearch index: telegram")
+            except meilisearch.errors.MeilisearchApiError as e:
+                if "already exists" in str(e).lower():
+                    logging.info("MeiliSearch index 'telegram' already exists, using existing index")
+                else:
+                    raise
+
+            # Update index settings (these are idempotent, safe to run every time)
             self.client.index("telegram").update_filterable_attributes(["chat.id", "chat.username", "chat.type", "indexed_by_account"])
             self.client.index("telegram").update_ranking_rules(
                 ["timestamp:desc", "words", "typo", "proximity", "attribute", "sort", "exactness"]
@@ -29,8 +40,9 @@ class SearchEngine(BasicSearchEngine):
             self.client.index("telegram").update_sortable_attributes(["timestamp"])
             # Enable faceting for chat.id to get list of synced chats per account
             self.client.index("telegram").update_faceting({"maxValuesPerFacet": 1000})
-        except:
-            logging.critical("Failed to connect to MeiliSearch")
+            logging.info("MeiliSearch initialized successfully")
+        except Exception as e:
+            logging.critical(f"Failed to connect to MeiliSearch: {e}")
 
     def upsert(self, message, account_id=None):
         if self.check_ignore(message):
