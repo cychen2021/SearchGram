@@ -16,7 +16,7 @@ from pyrogram import Client, enums, filters, types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from . import SearchEngine
-from .config import OWNER_ID, TOKEN
+from .config import OWNER_IDS, TOKEN
 from .init_client import get_client
 from .utils import setup_logger
 
@@ -35,7 +35,7 @@ parser.add_argument("-m", "--mode", help="match mode, e: exact match, other valu
 def private_use(func):
     def wrapper(client: "Client", message: "types.Message"):
         chat_id = getattr(message.chat, "id", None)
-        if chat_id != int(OWNER_ID):
+        if chat_id not in OWNER_IDS:
             logging.warning("Unauthorized user: %s", chat_id)
             return
         return func(client, message)

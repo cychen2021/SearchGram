@@ -17,9 +17,12 @@ MEILI_HOST = "http://localhost:7700"
 # Example: "800M" or "1G"
 # MEILI_MAX_INDEXING_MEMORY = "800M"
 
-# Your Telegram user ID
-# Get this from @blog_update_bot
+# Your Telegram user ID(s)
+# Get this from @userinfobot or @blog_update_bot
+# Can be a single ID or a list of IDs for multiple accounts
 OWNER_ID = "260260121"
+# For multiple accounts, use a list:
+# OWNER_ID = ["260260121", "5129702470"]
 
 # Proxy configuration (optional)
 # Uncomment and modify if you need proxy support

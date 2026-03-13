@@ -62,7 +62,17 @@ ZINC_PASS = os.getenv("ZINC_FIRST_ADMIN_PASSWORD", "root")
 
 ####################################
 # Your own user id, for example: 260260121
-OWNER_ID = _get_config("OWNER_ID", "OWNER_ID", "260260121")
+# Can be a single ID (string) or a list of IDs
+_owner_id_config = _get_config("OWNER_ID", "OWNER_ID", "260260121")
+if isinstance(_owner_id_config, list):
+    OWNER_IDS = [int(uid) for uid in _owner_id_config]
+elif isinstance(_owner_id_config, str):
+    OWNER_IDS = [int(_owner_id_config)]
+else:
+    OWNER_IDS = [int(_owner_id_config)]
+
+# Keep OWNER_ID for backward compatibility
+OWNER_ID = str(OWNER_IDS[0])
 BOT_ID = int(TOKEN.split(":")[0])
 
 # Handle PROXY configuration - can be a dict from TOML or string from env
