@@ -61,11 +61,12 @@ def sync_history():
 
     for uid in sync_items:
         try:
-            # Resolve the peer first to ensure it's known to Pyrogram
-            app.resolve_peer(uid)
-            logging.info(f"Resolved peer for {uid}")
+            # Try to get chat info first to populate Pyrogram's cache
+            # This works better than resolve_peer for unknown peers
+            chat = app.get_chat(uid)
+            logging.info(f"Resolved peer for {uid}: {chat.first_name or chat.title}")
         except Exception as e:
-            log = f"Failed to resolve peer {uid}: {e}. Skipping..."
+            log = f"Failed to resolve peer {uid}: {e}. Make sure you have interacted with this user/chat before, or use their @username instead. Skipping..."
             logging.error(log)
             safe_edit(saved, log)
             time.sleep(2)
