@@ -95,6 +95,13 @@ def get_sync_list():
     sync_section = _config.get("sync", {})
     return list(sync_section.keys())
 
+def get_sessions():
+    """Get list of session names to run. If not configured, return default session."""
+    sessions = _config.get("sessions")
+    if isinstance(sessions, list):
+        return sessions
+    return ["searchgram_client"]  # Default session name
+
 def get_whitelist():
     """Get whitelist of chat IDs/usernames from config."""
     whitelist_section = _config.get("whitelist", {})

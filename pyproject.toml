@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "searchgram"
-version = "1.1.6"
+version = "1.2.0"
 description = "A Telegram bot that improves search experience for Chinese, Japanese, and Korean (CJK) languages with message backup functionality"
 readme = "README.md"
 authors = [

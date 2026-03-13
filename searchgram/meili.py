@@ -22,7 +22,7 @@ class SearchEngine(BasicSearchEngine):
         try:
             self.client = meilisearch.Client(MEILI_HOST, MEILI_PASS)
             self.client.create_index("telegram", {"primaryKey": "ID"})
-            self.client.index("telegram").update_filterable_attributes(["chat.id", "chat.username", "chat.type"])
+            self.client.index("telegram").update_filterable_attributes(["chat.id", "chat.username", "chat.type", "indexed_by_account"])
             self.client.index("telegram").update_ranking_rules(
                 ["timestamp:desc", "words", "typo", "proximity", "attribute", "sort", "exactness"]
             )
@@ -30,13 +30,13 @@ class SearchEngine(BasicSearchEngine):
         except:
             logging.critical("Failed to connect to MeiliSearch")
 
-    def upsert(self, message):
+    def upsert(self, message, account_id=None):
         if self.check_ignore(message):
             return
-        data = self.set_uid(message)
+        data = self.set_uid(message, account_id)
         self.client.index("telegram").add_documents([data], primary_key="ID")
 
-    def search(self, keyword, _type=None, user=None, page=1, mode=None) -> dict:
+    def search(self, keyword, _type=None, user=None, page=1, mode=None, account_id=None) -> dict:
         if mode:
             keyword = f'"{keyword}"'
         user = self.clean_user(user)
@@ -51,6 +51,8 @@ class SearchEngine(BasicSearchEngine):
             params["filter"].extend([f"chat.username = {user} OR chat.id = {user}"])
         if _type:
             params["filter"].extend([f"chat.type = ChatType.{_type}"])
+        if account_id:
+            params["filter"].extend([f"indexed_by_account = {account_id}"])
         logging.info("Search params: %s", params)
         return self.client.index("telegram").search(keyword, params)
 

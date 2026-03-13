@@ -144,15 +144,15 @@ def generate_navigation(page, total_pages):
     return markup
 
 
-def parse_and_search(text, page=1) -> Tuple[str, InlineKeyboardMarkup | None]:
+def parse_and_search(text, page=1, account_id=None) -> Tuple[str, InlineKeyboardMarkup | None]:
     # return text and markup
     args = parser.parse_args(text.split())
     _type = args.type
     user = args.user
     keyword = args.keyword
     mode = args.mode
-    logging.info("Search keyword: %s, type: %s, user: %s, page: %s, mode: %s", keyword, _type, user, page, mode)
-    results = tgdb.search(keyword, _type, user, page, mode)
+    logging.info("Search keyword: %s, type: %s, user: %s, page: %s, mode: %s, account_id: %s", keyword, _type, user, page, mode, account_id)
+    results = tgdb.search(keyword, _type, user, page, mode, account_id=account_id)
     text = parse_search_results(results)
     if not text:
         return "No results found", None
@@ -181,7 +181,7 @@ def type_search_handler(client: "Client", message: "types.Message"):
 
     refined_text = f"-t={chat_type} {user_filter} {keyword}"
     client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-    text, markup = parse_and_search(refined_text)
+    text, markup = parse_and_search(refined_text, account_id=message.chat.id)
     message.reply_text(
         text, quote=True, parse_mode=enums.ParseMode.MARKDOWN, reply_markup=markup, disable_web_page_preview=True
     )
@@ -191,7 +191,7 @@ def type_search_handler(client: "Client", message: "types.Message"):
 @private_use
 def search_handler(client: "Client", message: "types.Message"):
     client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-    text, markup = parse_and_search(message.text)
+    text, markup = parse_and_search(message.text, account_id=message.chat.id)
     if len(text) > 4096:
         logging.warning("Message too long, sending as file instead")
         file = BytesIO(text.encode())
@@ -234,7 +234,7 @@ def send_method_callback(client: "Client", callback_query: types.CallbackQuery):
     else:
         refined_text = user_query
     client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-    new_text, new_markup = parse_and_search(refined_text, new_page)
+    new_text, new_markup = parse_and_search(refined_text, new_page, account_id=message.chat.id)
     message.edit_text(new_text, reply_markup=new_markup, disable_web_page_preview=True)
 
 

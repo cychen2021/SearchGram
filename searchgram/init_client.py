@@ -16,7 +16,7 @@ from pyrogram import Client
 from .config import APP_HASH, APP_ID, PROXY, IPv6
 
 
-def get_client(token=None):
+def get_client(token=None, session_name=None):
     if isinstance(PROXY, str):
         proxy = json.loads(PROXY)
     else:
@@ -25,7 +25,9 @@ def get_client(token=None):
     if token:
         return Client("searchgram_bot", APP_ID, APP_HASH, bot_token=token, ipv6=IPv6, **app_device)
     else:
-        return Client("searchgram_client", APP_ID, APP_HASH, ipv6=IPv6, **app_device)
+        # Use custom session name if provided, otherwise default to "searchgram_client"
+        session = session_name or "searchgram_client"
+        return Client(session, APP_ID, APP_HASH, ipv6=IPv6, **app_device)
 
 
 def get_revision():

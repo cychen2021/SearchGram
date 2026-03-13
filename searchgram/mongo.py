@@ -27,13 +27,13 @@ class SearchEngine(BasicSearchEngine):
     def __del__(self):
         self.client.close()
 
-    def upsert(self, message):
+    def upsert(self, message, account_id=None):
         if self.check_ignore(message):
             return
-        data = self.set_uid(message)
+        data = self.set_uid(message, account_id)
         self.chat.update_one({"ID": data["ID"]}, {"$set": data}, upsert=True)
 
-    def search(self, keyword, _type=None, user=None, page=1, mode=None):
+    def search(self, keyword, _type=None, user=None, page=1, mode=None, account_id=None):
         cond = {}
         hans = zhconv.convert(keyword, "zh-hans")
         hant = zhconv.convert(keyword, "zh-hant")
@@ -55,6 +55,8 @@ class SearchEngine(BasicSearchEngine):
             ]
         if _type:
             cond["chat.type"] = f"ChatType.{_type}"
+        if account_id:
+            cond["indexed_by_account"] = account_id
         results = self.chat.find(cond).sort("date", pymongo.DESCENDING).limit(10).skip((page - 1) * 10)
         total_hits = self.chat.count_documents(cond)
         total_pages = math.ceil(total_hits / 10)

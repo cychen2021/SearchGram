@@ -25,14 +25,14 @@ INDEX = "telegram"
 
 
 class SearchEngine(BasicSearchEngine):
-    def upsert(self, message):
+    def upsert(self, message, account_id=None):
         if self.check_ignore(message):
             return
-        data = self.set_uid(message)
+        data = self.set_uid(message, account_id)
         api_instance = document.Document(api_client)
         api_instance.index_with_id(INDEX, data.get("ID"), data)
 
-    def search(self, keyword, _type=None, user=None, page=1, mode=None) -> dict:
+    def search(self, keyword, _type=None, user=None, page=1, mode=None, account_id=None) -> dict:
         query = MetaZincQuery(
             query=MetaQuery(
                 bool=MetaBoolQuery(
@@ -63,6 +63,8 @@ class SearchEngine(BasicSearchEngine):
             )
         if _type:
             query.query.bool.must.append(MetaQuery(match={"chat.type": MetaMatchQuery(query=f"ChatType.{_type}")}))
+        if account_id:
+            query.query.bool.must.append(MetaQuery(match={"indexed_by_account": MetaMatchQuery(query=str(account_id))}))
 
         if mode:
             pass

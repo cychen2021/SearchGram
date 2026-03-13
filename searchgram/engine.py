@@ -12,11 +12,14 @@ from .config import get_whitelist, get_blacklist
 
 class BasicSearchEngine:
     @staticmethod
-    def set_uid(message) -> "dict":
+    def set_uid(message, account_id=None) -> "dict":
         uid = f"{message.chat.id}-{message.id}"
         timestamp = int(message.date.timestamp())
         setattr(message, "ID", uid)
         setattr(message, "timestamp", timestamp)
+        # Add account_id if provided to track which account indexed this message
+        if account_id:
+            setattr(message, "indexed_by_account", account_id)
 
         data = json.loads(str(message))
         return data

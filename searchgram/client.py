@@ -13,30 +13,43 @@ import threading
 import time
 
 import fakeredis
-from pyrogram import Client, filters, types
+from pyrogram import Client, compose, filters, types
 
 from . import SearchEngine
-from .config import BOT_ID, get_sync_list
+from .config import BOT_ID, get_sessions, get_sync_list
 from .init_client import get_client
 from .utils import setup_logger
 
 setup_logger()
 
-app = get_client()
 tgdb = SearchEngine()
 r = fakeredis.FakeStrictRedis()
 
+# Create multiple client instances based on configuration
+sessions = get_sessions()
+clients = [get_client(session_name=session) for session in sessions]
+logging.info(f"Initialized {len(clients)} client(s) with sessions: {sessions}")
 
-@app.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))
+
+# Define handlers that will be registered on all clients
 def message_handler(client: "Client", message: "types.Message"):
     logging.info("Adding new message: %s-%s", message.chat.id, message.id)
-    tgdb.upsert(message)
+    # Get the account ID from the client's user (me)
+    account_id = client.me.id if hasattr(client, 'me') and client.me else None
+    tgdb.upsert(message, account_id=account_id)
 
 
-@app.on_edited_message(~filters.chat(BOT_ID))
 def message_edit_handler(client: "Client", message: "types.Message"):
     logging.info("Editing old message: %s-%s", message.chat.id, message.id)
-    tgdb.upsert(message)
+    # Get the account ID from the client's user (me)
+    account_id = client.me.id if hasattr(client, 'me') and client.me else None
+    tgdb.upsert(message, account_id=account_id)
+
+
+# Register handlers on all clients
+for app in clients:
+    app.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
+    app.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
 
 
 def safe_edit(msg, new_text):
@@ -47,58 +60,64 @@ def safe_edit(msg, new_text):
         msg.edit_text(new_text)
 
 
-def sync_history():
+def sync_history(client):
+    """Sync history for a specific client instance."""
     time.sleep(30)
 
     # Get sync list from config
     sync_items = get_sync_list()
 
     if not sync_items:
-        logging.info("No chats configured for sync in config.toml")
+        logging.info(f"[{client.name}] No chats configured for sync in config.toml")
         return
 
-    saved = app.send_message("me", "Starting to sync history...")
+    saved = client.send_message("me", f"[{client.name}] Starting to sync history...")
 
     for uid in sync_items:
         try:
             # Try to get chat info first to populate Pyrogram's cache
             # This works better than resolve_peer for unknown peers
-            chat = app.get_chat(uid)
-            logging.info(f"Resolved peer for {uid}: {chat.first_name or chat.title}")
+            chat = client.get_chat(uid)
+            logging.info(f"[{client.name}] Resolved peer for {uid}: {chat.first_name or chat.title}")
         except Exception as e:
-            log = f"Failed to resolve peer {uid}: {e}. Make sure you have interacted with this user/chat before, or use their @username instead. Skipping..."
+            log = f"[{client.name}] Failed to resolve peer {uid}: {e}. Make sure you have interacted with this user/chat before, or use their @username instead. Skipping..."
             logging.error(log)
             safe_edit(saved, log)
             time.sleep(2)
             continue
 
         try:
-            total_count = app.get_chat_history_count(uid)
-            log = f"Syncing history for {uid}"
+            total_count = client.get_chat_history_count(uid)
+            log = f"[{client.name}] Syncing history for {uid}"
             logging.info(log)
             safe_edit(saved, log)
             time.sleep(random.random())  # avoid flood
-            chat_records = app.get_chat_history(uid)
+            chat_records = client.get_chat_history(uid)
             current = 0
+            account_id = client.me.id if hasattr(client, 'me') and client.me else None
             for msg in chat_records:
-                safe_edit(saved, f"[{current}/{total_count}] - {log}")
+                safe_edit(saved, f"[{client.name}] [{current}/{total_count}] - {log}")
                 current += 1
-                tgdb.upsert(msg)
+                tgdb.upsert(msg, account_id=account_id)
         except Exception as e:
-            log = f"Error syncing {uid}: {e}"
+            log = f"[{client.name}] Error syncing {uid}: {e}"
             logging.error(log)
             safe_edit(saved, log)
             time.sleep(2)
             continue
 
-    log = "Sync history complete"
+    log = f"[{client.name}] Sync history complete"
     logging.info(log)
     safe_edit(saved, log)
 
 
 def main():
-    threading.Thread(target=sync_history).start()
-    app.run()
+    # Start sync history thread for each client
+    for client in clients:
+        threading.Thread(target=sync_history, args=(client,), daemon=True).start()
+
+    # Run all clients simultaneously using compose
+    compose(clients)
 
 
 if __name__ == "__main__":
