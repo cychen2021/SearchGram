@@ -121,10 +121,13 @@ def main():
             await client.start()
             me = await client.get_me()
             logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
-            # Stop immediately to prevent message processing
+            # Stop immediately and wait for cleanup
             await client.stop()
+            # Give it a moment to fully clean up before next session
+            await asyncio.sleep(0.5)
 
         logging.info("All sessions authenticated successfully!")
+        print()  # Add blank line for cleaner output
 
         # Step 2: Register message handlers on all clients
         logging.info("Registering message handlers...")
