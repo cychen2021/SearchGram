@@ -60,17 +60,35 @@ def sync_history():
     saved = app.send_message("me", "Starting to sync history...")
 
     for uid in sync_items:
-        total_count = app.get_chat_history_count(uid)
-        log = f"Syncing history for {uid}"
-        logging.info(log)
-        safe_edit(saved, log)
-        time.sleep(random.random())  # avoid flood
-        chat_records = app.get_chat_history(uid)
-        current = 0
-        for msg in chat_records:
-            safe_edit(saved, f"[{current}/{total_count}] - {log}")
-            current += 1
-            tgdb.upsert(msg)
+        try:
+            # Resolve the peer first to ensure it's known to Pyrogram
+            app.resolve_peer(uid)
+            logging.info(f"Resolved peer for {uid}")
+        except Exception as e:
+            log = f"Failed to resolve peer {uid}: {e}. Skipping..."
+            logging.error(log)
+            safe_edit(saved, log)
+            time.sleep(2)
+            continue
+
+        try:
+            total_count = app.get_chat_history_count(uid)
+            log = f"Syncing history for {uid}"
+            logging.info(log)
+            safe_edit(saved, log)
+            time.sleep(random.random())  # avoid flood
+            chat_records = app.get_chat_history(uid)
+            current = 0
+            for msg in chat_records:
+                safe_edit(saved, f"[{current}/{total_count}] - {log}")
+                current += 1
+                tgdb.upsert(msg)
+        except Exception as e:
+            log = f"Error syncing {uid}: {e}"
+            logging.error(log)
+            safe_edit(saved, log)
+            time.sleep(2)
+            continue
 
     log = "Sync history complete"
     logging.info(log)
