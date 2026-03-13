@@ -31,25 +31,19 @@ clients = [get_client(session_name=session) for session in sessions]
 logging.info(f"Initialized {len(clients)} client(s) with sessions: {sessions}")
 
 
-# Define handlers that will be registered on all clients
+# Define handlers that will be registered on all clients after authentication
 def message_handler(client: "Client", message: "types.Message"):
     logging.info("Adding new message: %s-%s", message.chat.id, message.id)
     # Get the account ID from the client's user (me)
-    account_id = client.me.id if hasattr(client, 'me') and client.me else None
+    account_id = client.me.id
     tgdb.upsert(message, account_id=account_id)
 
 
 def message_edit_handler(client: "Client", message: "types.Message"):
     logging.info("Editing old message: %s-%s", message.chat.id, message.id)
     # Get the account ID from the client's user (me)
-    account_id = client.me.id if hasattr(client, 'me') and client.me else None
+    account_id = client.me.id
     tgdb.upsert(message, account_id=account_id)
-
-
-# Register handlers on all clients
-for app in clients:
-    app.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
-    app.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
 
 
 def safe_edit(msg, new_text):
@@ -116,22 +110,32 @@ def main():
     import asyncio
 
     async def run():
-        # Start each client sequentially to handle authentication properly
+        # Step 1: Authenticate all clients sequentially
         logging.info(f"Authenticating {len(clients)} session(s)...")
         for i, client in enumerate(clients, 1):
-            logging.info(f"[{i}/{len(clients)}] Starting session: {client.name}")
+            print(f"\n{'='*60}")
+            print(f"  [{i}/{len(clients)}] Authenticating session: {client.name}")
+            print(f"{'='*60}")
             await client.start()
             me = await client.get_me()
             logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
 
         logging.info("All sessions authenticated successfully!")
 
-        # Start sync history thread for each client
+        # Step 2: Register message handlers on all authenticated clients
+        logging.info("Registering message handlers...")
+        for client in clients:
+            client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
+            client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
+        logging.info("Message handlers registered!")
+
+        # Step 3: Start sync history threads for each client
+        logging.info("Starting history sync threads...")
         for client in clients:
             threading.Thread(target=sync_history, args=(client,), daemon=True).start()
 
-        # Keep all clients running
-        logging.info("All clients are now running. Press Ctrl+C to stop.")
+        # Step 4: Keep all clients running
+        logging.info("✓ All clients are now running. Press Ctrl+C to stop.")
         await idle()
 
         # Stop all clients on exit
