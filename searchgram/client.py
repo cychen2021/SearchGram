@@ -113,6 +113,11 @@ def main():
         # Step 1: Authenticate all clients sequentially (start and stop to prevent event processing)
         logging.info(f"Authenticating {len(clients)} session(s)...")
 
+        # Temporarily suppress Pyrogram's verbose internal logging during authentication
+        pyrogram_logger = logging.getLogger("pyrogram")
+        original_level = pyrogram_logger.level
+        pyrogram_logger.setLevel(logging.WARNING)
+
         for i, client in enumerate(clients, 1):
             print(f"\n{'='*60}")
             print(f"  [{i}/{len(clients)}] Session: {client.name}")
@@ -125,6 +130,9 @@ def main():
             await client.stop()
             # Give it a moment to fully clean up before next session
             await asyncio.sleep(0.5)
+
+        # Restore original logging level
+        pyrogram_logger.setLevel(original_level)
 
         logging.info("All sessions authenticated successfully!")
         print()  # Add blank line for cleaner output
