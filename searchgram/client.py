@@ -52,12 +52,30 @@ def sync_history():
     time.sleep(30)
     config = configparser.ConfigParser(allow_no_value=True)
     config.optionxform = lambda option: option
-    config.read("sync.ini")
 
-    if config.items("sync"):
+    # Read config file, handle if it doesn't exist
+    files_read = config.read("sync.ini")
+    if not files_read:
+        logging.warning("sync.ini not found, skipping history sync")
+        return
+
+    # Ensure required sections exist
+    if not config.has_section("sync"):
+        logging.warning("No [sync] section in sync.ini, skipping history sync")
+        return
+
+    if not config.has_section("blacklist"):
+        config.add_section("blacklist")
+
+    if not config.has_section("whitelist"):
+        config.add_section("whitelist")
+
+    # Check if there are any items to sync
+    sync_items = config.options("sync")
+    if sync_items:
         saved = app.send_message("me", "Starting to sync history...")
 
-        for uid in config.options("sync"):
+        for uid in sync_items:
             total_count = app.get_chat_history_count(uid)
             log = f"Syncing history for {uid}"
             logging.info(log)
@@ -77,6 +95,8 @@ def sync_history():
         log = "Sync history complete"
         logging.info(log)
         safe_edit(saved, log)
+    else:
+        logging.info("No chats configured for sync")
 
 
 def main():

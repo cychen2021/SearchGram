@@ -26,7 +26,10 @@ class BasicSearchEngine:
     @staticmethod
     def get_config_list():
         config.read("sync.ini")
-        return config.options("whitelist"), config.options("blacklist")
+        # Return empty lists if sections don't exist
+        whitelist = config.options("whitelist") if config.has_section("whitelist") else []
+        blacklist = config.options("blacklist") if config.has_section("blacklist") else []
+        return whitelist, blacklist
 
     @staticmethod
     def check_ignore(message):
