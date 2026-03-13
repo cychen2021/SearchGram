@@ -39,7 +39,7 @@ class SearchEngine(BasicSearchEngine):
             )
             self.client.index("telegram").update_sortable_attributes(["timestamp"])
             # Enable faceting for chat.id to get list of synced chats per account
-            self.client.index("telegram").update_faceting({"maxValuesPerFacet": 1000})
+            self.client.index("telegram").update_faceting_settings({"maxValuesPerFacet": 1000})
             logging.info("MeiliSearch initialized successfully")
         except Exception as e:
             logging.critical(f"Failed to connect to MeiliSearch: {e}")
