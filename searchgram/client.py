@@ -113,15 +113,32 @@ async def sync_history(client):
             await asyncio.sleep(random.random())  # avoid flood
             chat_records = client.get_chat_history(uid)
             current = 0
+            skipped = 0
+            inserted = 0
             account_id = client.me.id
             async for msg in chat_records:
                 if current % 10 == 0:  # Update progress every 10 messages
                     try:
-                        await saved.edit_text(f"[{client.name}] [{current}/{total_count}] - {log}")
+                        await saved.edit_text(f"[{client.name}] [{current}/{total_count}] ({inserted} new, {skipped} skipped) - {log}")
                     except:
                         pass
                 current += 1
+
+                # Skip if message already exists
+                if tgdb.message_exists(msg.chat.id, msg.id):
+                    skipped += 1
+                    continue
+
                 tgdb.upsert(msg, account_id=account_id)
+                inserted += 1
+
+            # Log completion stats
+            completion_log = f"[{client.name}] Completed {uid}: {inserted} new messages, {skipped} skipped"
+            logging.info(completion_log)
+            try:
+                await saved.edit_text(completion_log)
+            except:
+                pass
         except Exception as e:
             log = f"[{client.name}] Error syncing {uid}: {e}"
             logging.error(log)

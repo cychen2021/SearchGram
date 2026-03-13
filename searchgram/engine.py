@@ -155,3 +155,7 @@ class BasicSearchEngine:
     def get_synced_chats_for_account(self, account_id):
         """Get list of chat IDs that have been synced for a specific account."""
         pass
+
+    def message_exists(self, chat_id, message_id):
+        """Check if a message already exists in the index."""
+        pass

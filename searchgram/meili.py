@@ -120,6 +120,16 @@ class SearchEngine(BasicSearchEngine):
             logging.error(f"Failed to get synced chats for account {account_id}: {e}")
             return []
 
+    def message_exists(self, chat_id, message_id):
+        """Check if a message already exists in the index."""
+        try:
+            uid = f"{chat_id}-{message_id}"
+            doc = self.client.index("telegram").get_document(uid)
+            return doc is not None
+        except Exception:
+            # Document not found or other error
+            return False
+
 
 if __name__ == "__main__":
     search = SearchEngine()
