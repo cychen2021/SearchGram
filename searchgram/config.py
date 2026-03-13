@@ -78,3 +78,19 @@ else:
 # PROXY = {"scheme": "socks5", "hostname": "localhost", "port": 1080}
 
 IPv6 = bool(os.getenv("IPv6", False))
+
+# Sync configuration - get lists from TOML sections
+def get_sync_list():
+    """Get list of chat IDs/usernames to sync from config."""
+    sync_section = _config.get("sync", {})
+    return list(sync_section.keys())
+
+def get_whitelist():
+    """Get whitelist of chat IDs/usernames from config."""
+    whitelist_section = _config.get("whitelist", {})
+    return list(whitelist_section.keys())
+
+def get_blacklist():
+    """Get blacklist of chat IDs/usernames from config."""
+    blacklist_section = _config.get("blacklist", {})
+    return list(blacklist_section.keys())

@@ -4,12 +4,10 @@
 # SearchGram - engine.py
 # 2023-11-18  16:34
 
-import configparser
 import contextlib
 import json
 
-config = configparser.ConfigParser(allow_no_value=True)
-config.optionxform = lambda option: option
+from .config import get_whitelist, get_blacklist
 
 
 class BasicSearchEngine:
@@ -25,11 +23,7 @@ class BasicSearchEngine:
 
     @staticmethod
     def get_config_list():
-        config.read("sync.ini")
-        # Return empty lists if sections don't exist
-        whitelist = config.options("whitelist") if config.has_section("whitelist") else []
-        blacklist = config.options("blacklist") if config.has_section("blacklist") else []
-        return whitelist, blacklist
+        return get_whitelist(), get_blacklist()
 
     @staticmethod
     def check_ignore(message):
