@@ -30,9 +30,14 @@ sessions = get_sessions()
 clients = [get_client(session_name=session) for session in sessions]
 logging.info(f"Initialized {len(clients)} client(s) with sessions: {sessions}")
 
+# Flag to control when message processing should begin
+_handlers_active = False
+
 
 # Define handlers that will be registered on all clients after authentication
 def message_handler(client: "Client", message: "types.Message"):
+    if not _handlers_active:
+        return  # Skip processing until all clients are ready
     logging.info("Adding new message: %s-%s", message.chat.id, message.id)
     # Get the account ID from the client's user (me)
     account_id = client.me.id
@@ -40,6 +45,8 @@ def message_handler(client: "Client", message: "types.Message"):
 
 
 def message_edit_handler(client: "Client", message: "types.Message"):
+    if not _handlers_active:
+        return  # Skip processing until all clients are ready
     logging.info("Editing old message: %s-%s", message.chat.id, message.id)
     # Get the account ID from the client's user (me)
     account_id = client.me.id
@@ -110,7 +117,12 @@ def main():
     import asyncio
 
     async def run():
-        # Step 1: Authenticate all clients sequentially (start and stop to prevent event processing)
+        # Step 1: Register message handlers on all clients BEFORE starting
+        for client in clients:
+            client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
+            client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
+
+        # Step 2: Authenticate and start all clients sequentially
         logging.info(f"Authenticating {len(clients)} session(s)...")
 
         # Temporarily suppress Pyrogram's verbose internal logging during authentication
@@ -126,10 +138,6 @@ def main():
             await client.start()
             me = await client.get_me()
             logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
-            # Stop immediately and wait for cleanup
-            await client.stop()
-            # Give it a moment to fully clean up before next session
-            await asyncio.sleep(0.5)
 
         # Restore original logging level
         pyrogram_logger.setLevel(original_level)
@@ -137,19 +145,10 @@ def main():
         logging.info("All sessions authenticated successfully!")
         print()  # Add blank line for cleaner output
 
-        # Step 2: Register message handlers on all clients
-        logging.info("Registering message handlers...")
-        for client in clients:
-            client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
-            client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
-        logging.info("Message handlers registered!")
-
-        # Step 3: Start ALL clients together
-        logging.info("Starting all clients together...")
-        for i, client in enumerate(clients, 1):
-            await client.start()
-            me = await client.get_me()
-            logging.info(f"[{i}/{len(clients)}] Started: {me.first_name} (ID: {me.id})")
+        # Step 3: Activate message handlers now that all clients are ready
+        global _handlers_active
+        _handlers_active = True
+        logging.info("Message processing activated for all clients!")
 
         # Step 4: Start sync history threads for each client
         logging.info("Starting history sync threads...")
