@@ -9,10 +9,7 @@ __author__ = "Benny <benny.think@gmail.com>"
 
 import logging
 import random
-import threading
-import time
 
-import fakeredis
 from pyrogram import Client, compose, filters, types
 
 from . import SearchEngine
@@ -23,7 +20,6 @@ from .utils import setup_logger
 setup_logger()
 
 tgdb = SearchEngine()
-r = fakeredis.FakeStrictRedis()
 
 # Create multiple client instances based on configuration
 sessions = get_sessions()
@@ -53,17 +49,10 @@ def message_edit_handler(client: "Client", message: "types.Message"):
     tgdb.upsert(message, account_id=account_id)
 
 
-def safe_edit(msg, new_text):
-    key = "sync-chat"
-    if not r.exists(key):
-        time.sleep(random.random())
-        r.set(key, "ok", ex=2)
-        msg.edit_text(new_text)
-
-
-def sync_history(client):
+async def sync_history(client):
     """Sync history for a specific client instance."""
-    time.sleep(30)
+    import asyncio
+    await asyncio.sleep(30)
 
     # Get sync list from config
     sync_items = get_sync_list()
@@ -72,44 +61,60 @@ def sync_history(client):
         logging.info(f"[{client.name}] No chats configured for sync in config.toml")
         return
 
-    saved = client.send_message("me", f"[{client.name}] Starting to sync history...")
+    saved = await client.send_message("me", f"[{client.name}] Starting to sync history...")
 
     for uid in sync_items:
         try:
             # Try to get chat info first to populate Pyrogram's cache
             # This works better than resolve_peer for unknown peers
-            chat = client.get_chat(uid)
+            chat = await client.get_chat(uid)
             logging.info(f"[{client.name}] Resolved peer for {uid}: {chat.first_name or chat.title}")
         except Exception as e:
             log = f"[{client.name}] Failed to resolve peer {uid}: {e}. Make sure you have interacted with this user/chat before, or use their @username instead. Skipping..."
             logging.error(log)
-            safe_edit(saved, log)
-            time.sleep(2)
+            try:
+                await saved.edit_text(log)
+            except:
+                pass
+            await asyncio.sleep(2)
             continue
 
         try:
-            total_count = client.get_chat_history_count(uid)
+            total_count = await client.get_chat_history_count(uid)
             log = f"[{client.name}] Syncing history for {uid}"
             logging.info(log)
-            safe_edit(saved, log)
-            time.sleep(random.random())  # avoid flood
+            try:
+                await saved.edit_text(log)
+            except:
+                pass
+            await asyncio.sleep(random.random())  # avoid flood
             chat_records = client.get_chat_history(uid)
             current = 0
-            account_id = client.me.id if hasattr(client, 'me') and client.me else None
-            for msg in chat_records:
-                safe_edit(saved, f"[{client.name}] [{current}/{total_count}] - {log}")
+            account_id = client.me.id
+            async for msg in chat_records:
+                if current % 10 == 0:  # Update progress every 10 messages
+                    try:
+                        await saved.edit_text(f"[{client.name}] [{current}/{total_count}] - {log}")
+                    except:
+                        pass
                 current += 1
                 tgdb.upsert(msg, account_id=account_id)
         except Exception as e:
             log = f"[{client.name}] Error syncing {uid}: {e}"
             logging.error(log)
-            safe_edit(saved, log)
-            time.sleep(2)
+            try:
+                await saved.edit_text(log)
+            except:
+                pass
+            await asyncio.sleep(2)
             continue
 
     log = f"[{client.name}] Sync history complete"
     logging.info(log)
-    safe_edit(saved, log)
+    try:
+        await saved.edit_text(log)
+    except:
+        pass
 
 
 def main():
@@ -150,10 +155,10 @@ def main():
         _handlers_active = True
         logging.info("Message processing activated for all clients!")
 
-        # Step 4: Start sync history threads for each client
-        logging.info("Starting history sync threads...")
+        # Step 4: Start sync history tasks for each client
+        logging.info("Starting history sync tasks...")
         for client in clients:
-            threading.Thread(target=sync_history, args=(client,), daemon=True).start()
+            asyncio.create_task(sync_history(client))
 
         # Step 5: Keep all clients running
         logging.info("✓ All clients are now running. Press Ctrl+C to stop.")
