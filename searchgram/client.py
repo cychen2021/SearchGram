@@ -34,18 +34,33 @@ _handlers_active = False
 def message_handler(client: "Client", message: "types.Message"):
     if not _handlers_active:
         return  # Skip processing until all clients are ready
-    logging.info("Adding new message: %s-%s", message.chat.id, message.id)
+
+    logging.info(f"[{client.name}] Adding new message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
+
     # Get the account ID from the client's user (me)
     account_id = client.me.id
+
+    # Check if message will be ignored
+    if tgdb.check_ignore(message):
+        logging.warning(f"[{client.name}] Message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
+        return
+
     tgdb.upsert(message, account_id=account_id)
 
 
 def message_edit_handler(client: "Client", message: "types.Message"):
     if not _handlers_active:
         return  # Skip processing until all clients are ready
-    logging.info("Editing old message: %s-%s", message.chat.id, message.id)
+
+    logging.info(f"[{client.name}] Editing old message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
+
     # Get the account ID from the client's user (me)
     account_id = client.me.id
+
+    if tgdb.check_ignore(message):
+        logging.warning(f"[{client.name}] Edited message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
+        return
+
     tgdb.upsert(message, account_id=account_id)
 
 
@@ -163,6 +178,7 @@ def main():
 
     async def run():
         # Step 1: Register message handlers on all clients BEFORE starting
+        logging.info(f"Registering message handlers on {len(clients)} client(s) (excluding BOT_ID: {BOT_ID})...")
         for client in clients:
             client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
             client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
