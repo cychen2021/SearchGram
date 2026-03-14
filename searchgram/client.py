@@ -177,16 +177,10 @@ def main():
     import asyncio
 
     async def run():
-        # Step 1: Register message handlers on all clients BEFORE starting
-        logging.info(f"Registering message handlers on {len(clients)} client(s) (excluding BOT_ID: {BOT_ID})...")
-        for client in clients:
-            client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
-            client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
-
-        # Step 2: Authenticate and start all clients sequentially
+        # Step 1: Authenticate and start all clients sequentially
         logging.info(f"Authenticating {len(clients)} session(s)...")
 
-        # Temporarily suppress Pyrogram's verbose internal logging during authentication
+        # Step 2: Temporarily suppress Pyrogram's verbose internal logging during authentication
         pyrogram_logger = logging.getLogger("pyrogram")
         original_level = pyrogram_logger.level
         pyrogram_logger.setLevel(logging.WARNING)
@@ -206,17 +200,24 @@ def main():
         logging.info("All sessions authenticated successfully!")
         print()  # Add blank line for cleaner output
 
-        # Step 3: Activate message handlers now that all clients are ready
+        # Step 3: Register message handlers on all clients AFTER authentication
+        logging.info(f"Registering message handlers on {len(clients)} client(s) (excluding BOT_ID: {BOT_ID})...")
+        for client in clients:
+            client.on_message((filters.outgoing | filters.incoming) & ~filters.chat(BOT_ID))(message_handler)
+            client.on_edited_message(~filters.chat(BOT_ID))(message_edit_handler)
+        logging.info("Handlers registered successfully!")
+
+        # Step 4: Activate message handlers now that all clients are ready
         global _handlers_active
         _handlers_active = True
         logging.info("Message processing activated for all clients!")
 
-        # Step 4: Start sync history tasks for each client
+        # Step 5: Start sync history tasks for each client
         logging.info("Starting history sync tasks...")
         for client in clients:
             asyncio.create_task(sync_history(client))
 
-        # Step 5: Keep all clients running
+        # Step 6: Keep all clients running
         logging.info("✓ All clients are now running. Press Ctrl+C to stop.")
         await idle()
 
