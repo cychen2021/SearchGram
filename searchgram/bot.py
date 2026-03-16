@@ -26,7 +26,7 @@ setup_logger()
 app = get_client(TOKEN)
 chat_types = [i for i in dir(enums.ChatType) if not i.startswith("_")]
 parser = argparse.ArgumentParser()
-parser.add_argument("keyword", help="the keyword to be searched")
+parser.add_argument("keyword", nargs='+', help="the keyword to be searched")
 parser.add_argument("-t", "--type", help="the type of message", default=None)
 parser.add_argument("-u", "--user", help="the user who sent the message", default=None)
 parser.add_argument("-m", "--mode", help="match mode, e: exact match, other value is fuzzy search", default=None)
@@ -149,7 +149,7 @@ def parse_and_search(text, page=1, account_id=None) -> Tuple[str, InlineKeyboard
     args = parser.parse_args(text.split())
     _type = args.type
     user = args.user
-    keyword = args.keyword
+    keyword = ' '.join(args.keyword)
     mode = args.mode
     logging.info("Search keyword: %s, type: %s, user: %s, page: %s, mode: %s, account_id: %s", keyword, _type, user, page, mode, account_id)
     results = tgdb.search(keyword, _type, user, page, mode, account_id=account_id)
