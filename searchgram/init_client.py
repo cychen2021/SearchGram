@@ -8,6 +8,7 @@
 __author__ = "Benny <benny.think@gmail.com>"
 
 import contextlib
+import getpass
 import json
 import urllib.request
 
@@ -27,7 +28,8 @@ def get_client(token=None, session_name=None):
     else:
         # Use custom session name if provided, otherwise default to "searchgram_client"
         session = session_name or "searchgram_client"
-        return Client(session, APP_ID, APP_HASH, ipv6=IPv6, **app_device)
+        # Use getpass for password input to hide 2FA password
+        return Client(session, APP_ID, APP_HASH, ipv6=IPv6, password=lambda: getpass.getpass("Enter your 2FA password: "), **app_device)
 
 
 def get_revision():

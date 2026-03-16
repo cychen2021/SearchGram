@@ -7,7 +7,6 @@
 
 __author__ = "Benny <benny.think@gmail.com>"
 
-import getpass
 import logging
 import random
 
@@ -191,8 +190,7 @@ def main():
             print(f"  [{i}/{len(clients)}] Session: {client.name}")
             print(f"{'='*60}")
             # start() handles both new auth (with prompts) and existing sessions
-            # Use getpass for password input to hide it from terminal
-            await client.start(password=lambda: getpass.getpass("Enter your 2FA password: "))
+            await client.start()
             me = await client.get_me()
             logging.info(f"[{i}/{len(clients)}] ✓ Authenticated as: {me.first_name} (ID: {me.id})")
 
