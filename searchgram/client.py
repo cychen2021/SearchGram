@@ -34,41 +34,71 @@ _handlers_active = False
 
 # Define handlers that will be registered on all clients after authentication
 def message_handler(client: "Client", message: "types.Message"):
+    logging.info(f"[{client.name}] DEBUG: message_handler called for {message.chat.id}-{message.id}, _handlers_active={_handlers_active}")
+
     if not _handlers_active:
+        logging.info(f"[{client.name}] DEBUG: Handler skipped - _handlers_active is False")
         return  # Skip processing until all clients are ready
 
-    logging.info(f"[{client.name}] Adding new message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
+    try:
+        logging.info(f"[{client.name}] Adding new message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
 
-    # Get the account ID from the client's user (me)
-    account_id = client.me.id
+        # Get the account ID from the client's user (me)
+        account_id = client.me.id
 
-    # Check if message will be ignored
-    if tgdb.check_ignore(message):
-        logging.warning(f"[{client.name}] Message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
-        return
+        # Check if message will be ignored
+        if tgdb.check_ignore(message):
+            logging.warning(f"[{client.name}] Message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
+            return
 
-    tgdb.upsert(message, account_id=account_id)
+        tgdb.upsert(message, account_id=account_id)
+        logging.info(f"[{client.name}] DEBUG: Successfully processed message {message.chat.id}-{message.id}")
+    except Exception as e:
+        logging.error(f"[{client.name}] ERROR in message_handler: {e}", exc_info=True)
 
 
 def message_edit_handler(client: "Client", message: "types.Message"):
+    logging.info(f"[{client.name}] DEBUG: message_edit_handler called for {message.chat.id}-{message.id}, _handlers_active={_handlers_active}")
+
     if not _handlers_active:
+        logging.info(f"[{client.name}] DEBUG: Edit handler skipped - _handlers_active is False")
         return  # Skip processing until all clients are ready
 
-    logging.info(f"[{client.name}] Editing old message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
+    try:
+        logging.info(f"[{client.name}] Editing old message: {message.chat.id}-{message.id} (type: {message.chat.type.name})")
 
-    # Get the account ID from the client's user (me)
-    account_id = client.me.id
+        # Get the account ID from the client's user (me)
+        account_id = client.me.id
 
-    if tgdb.check_ignore(message):
-        logging.warning(f"[{client.name}] Edited message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
-        return
+        if tgdb.check_ignore(message):
+            logging.warning(f"[{client.name}] Edited message {message.chat.id}-{message.id} ignored by whitelist/blacklist (chat_type: {message.chat.type.name})")
+            return
 
-    tgdb.upsert(message, account_id=account_id)
+        tgdb.upsert(message, account_id=account_id)
+        logging.info(f"[{client.name}] DEBUG: Successfully processed edited message {message.chat.id}-{message.id}")
+    except Exception as e:
+        logging.error(f"[{client.name}] ERROR in message_edit_handler: {e}", exc_info=True)
+
+
+async def health_check(client):
+    """Periodic health check to monitor client state and handler registration."""
+    import asyncio
+    await asyncio.sleep(60)  # Wait 60 seconds before first check
+
+    while True:
+        try:
+            is_connected = client.is_connected
+            logging.info(f"[{client.name}] HEALTH CHECK: connected={is_connected}, _handlers_active={_handlers_active}, handlers_count={len(client.dispatcher.groups.get(0, []))}")
+        except Exception as e:
+            logging.error(f"[{client.name}] HEALTH CHECK ERROR: {e}")
+
+        await asyncio.sleep(300)  # Check every 5 minutes
 
 
 async def sync_history(client):
     """Sync history for a specific client instance."""
     import asyncio
+    logging.info(f"[{client.name}] DEBUG: sync_history task starting, will wait 30 seconds...")
     await asyncio.sleep(30)
 
     # Get sync list for this specific session
@@ -192,8 +222,19 @@ async def sync_history(client):
         pass
 
     # Final yield to ensure event loop processes any pending updates after sync completes
+    logging.info(f"[{client.name}] DEBUG: Sync complete. Client state: connected={client.is_connected}, _handlers_active={_handlers_active}")
     logging.info(f"[{client.name}] Yielding control to process pending updates...")
     await asyncio.sleep(0.5)
+    logging.info(f"[{client.name}] DEBUG: sync_history task finished. Client ready for new messages.")
+
+    # Send a test message to verify handlers are still working
+    try:
+        await asyncio.sleep(2)  # Wait a bit before test
+        test_msg = await client.send_message("me", f"[{client.name}] DEBUG: Test message after sync - if you see this being logged, handlers are working!")
+        await asyncio.sleep(1)
+        logging.info(f"[{client.name}] DEBUG: Test message sent with ID {test_msg.id}. Check if handler logged it above.")
+    except Exception as e:
+        logging.error(f"[{client.name}] DEBUG: Failed to send test message: {e}")
 
 
 def main():
@@ -252,8 +293,14 @@ def main():
         for client in clients:
             asyncio.create_task(sync_history(client))
 
+        # Step 5.5: Start health check tasks for monitoring
+        logging.info("Starting health check tasks...")
+        for client in clients:
+            asyncio.create_task(health_check(client))
+
         # Step 6: Keep all clients running
         logging.info("✓ All clients are now running. Press Ctrl+C to stop.")
+        logging.info(f"DEBUG: Active handlers flag: _handlers_active={_handlers_active}")
         await idle()
 
         # Stop all clients on exit
