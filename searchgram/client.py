@@ -128,26 +128,40 @@ async def sync_history(client):
             except:
                 pass
             await asyncio.sleep(random.random())  # avoid flood
+
+            # Use try/finally to ensure the async iterator is properly closed
             chat_records = client.get_chat_history(uid)
             current = 0
             skipped = 0
             inserted = 0
             account_id = client.me.id
-            async for msg in chat_records:
-                if current % 10 == 0:  # Update progress every 10 messages
-                    try:
-                        await saved.edit_text(f"[{client.name}] [{current}/{total_count}] ({inserted} new, {skipped} skipped) - {log}")
-                    except:
-                        pass
-                current += 1
 
-                # Skip if message already exists
-                if tgdb.message_exists(msg.chat.id, msg.id):
-                    skipped += 1
-                    continue
+            try:
+                async for msg in chat_records:
+                    if current % 10 == 0:  # Update progress every 10 messages
+                        try:
+                            await saved.edit_text(f"[{client.name}] [{current}/{total_count}] ({inserted} new, {skipped} skipped) - {log}")
+                        except:
+                            pass
+                    current += 1
 
-                tgdb.upsert(msg, account_id=account_id)
-                inserted += 1
+                    # Skip if message already exists
+                    if tgdb.message_exists(msg.chat.id, msg.id):
+                        skipped += 1
+                        # Yield to event loop periodically to allow new messages to be processed
+                        if skipped % 50 == 0:
+                            await asyncio.sleep(0)
+                        continue
+
+                    tgdb.upsert(msg, account_id=account_id)
+                    inserted += 1
+
+                    # Yield to event loop every few messages to allow incoming messages to be processed
+                    if inserted % 5 == 0:
+                        await asyncio.sleep(0)
+            finally:
+                # Ensure the async iterator is properly closed to avoid leaving client in bad state
+                await chat_records.aclose()
 
             # Log completion stats
             completion_log = f"[{client.name}] Completed {uid}: {inserted} new messages, {skipped} skipped"
@@ -156,6 +170,10 @@ async def sync_history(client):
                 await saved.edit_text(completion_log)
             except:
                 pass
+
+            # Yield to event loop after completing each chat to ensure pending updates are processed
+            await asyncio.sleep(0.1)
+
         except Exception as e:
             log = f"[{client.name}] Error syncing {uid}: {e}"
             logging.error(log)
@@ -172,6 +190,10 @@ async def sync_history(client):
         await saved.edit_text(log)
     except:
         pass
+
+    # Final yield to ensure event loop processes any pending updates after sync completes
+    logging.info(f"[{client.name}] Yielding control to process pending updates...")
+    await asyncio.sleep(0.5)
 
 
 def main():
