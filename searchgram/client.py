@@ -7,6 +7,8 @@
 
 __author__ = "Benny <benny.think@gmail.com>"
 
+import builtins
+import getpass
 import logging
 import random
 
@@ -176,6 +178,17 @@ def main():
     from pyrogram import idle
     import asyncio
 
+    # Monkey-patch input to use getpass for password prompts
+    _original_input = builtins.input
+
+    def _secure_input(prompt=""):
+        # If prompt contains "password", use getpass to hide input
+        if "password" in prompt.lower():
+            return getpass.getpass(prompt)
+        return _original_input(prompt)
+
+    builtins.input = _secure_input
+
     async def run():
         # Step 1: Authenticate and start all clients sequentially
         logging.info(f"Authenticating {len(clients)} session(s)...")
@@ -225,8 +238,12 @@ def main():
         for client in clients:
             await client.stop()
 
-    # Run the async function
-    asyncio.run(run())
+    try:
+        # Run the async function
+        asyncio.run(run())
+    finally:
+        # Restore original input function
+        builtins.input = _original_input
 
 
 if __name__ == "__main__":
